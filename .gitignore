@@ -1,0 +1,33 @@
+# Environment / secrets
+.env
+
+# Databases
+*.db
+
+# Temporary downloads
+tmp_downloads/
+
+# Python virtual environments
+.venv/
+venv/
+
+# Python cache/build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+
+# OS / editor cruft
+.DS_Store
+.vscode/
+.idea/
+
+# Real student / private data - never commit
+student_data/
+private_data/
+sample_data/real/
+*.student.*
