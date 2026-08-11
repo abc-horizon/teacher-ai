@@ -1,1 +1,8 @@
-# Placeholder entry point for the application. Implementation begins in T1.1.
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}

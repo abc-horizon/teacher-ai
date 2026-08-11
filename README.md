@@ -34,3 +34,13 @@ Copy `.env.example` to `.env` and fill in local values. Never commit a real
 
 Dependencies are not yet defined; `requirements.txt` will be populated in a
 later task.
+
+## Running
+
+Run these from the project root after activating the virtual environment
+(`.venv`):
+
+```
+uvicorn app.main:app --reload
+streamlit run portal/Home.py
+```
