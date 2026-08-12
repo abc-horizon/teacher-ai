@@ -1,0 +1,59 @@
+{
+  "metadata": {
+    "purpose": "Fixed command-verb definitions used to reduce inconsistent interpretation during BTEC assessment.",
+    "primary_source": "Pearson BTEC Levels 4 and 5 Higher Nationals in Business, Effective Assignment Design: Authorised Assignment Briefs, Issue 1, June 2021, Appendix 1: Glossary of terms used for internally assessed units.",
+    "source_url": "https://hnglobal.highernationals.com/sites/default/files/Authorised%20Assignment%20Brief%20Booklet_09.06.21_2.pdf",
+    "source_pages": "PDF pages 106-108",
+    "important_note": "Definitions marked PEARSON_OFFICIAL are taken from the Pearson glossary. Definitions marked OPERATIONAL are supplementary fixed interpretations for command verbs that were not separately defined in that glossary. Operational definitions must not be presented as direct Pearson quotations."
+  },
+  "command_verbs": {
+    "Describe": {
+      "definition": "Give a clear, objective account in their own words showing recall, and in some cases application, of the relevant features and information about the subject.",
+      "definition_type": "PEARSON_OFFICIAL"
+    },
+    "Investigate": {
+      "definition": "Conduct an inquiry or study into something to discover and examine facts and information.",
+      "definition_type": "PEARSON_OFFICIAL"
+    },
+    "Explain": {
+      "definition": "To give an account of the purposes or reasons.",
+      "definition_type": "PEARSON_OFFICIAL"
+    },
+    "Interpret": {
+      "definition": "State the meaning, purpose or qualities of something through the use of images, words or other expression.",
+      "definition_type": "PEARSON_OFFICIAL"
+    },
+    "Discuss": {
+      "definition": "Consider different aspects of a theme or topic, how they interrelate, and the extent to which they are important.",
+      "definition_type": "PEARSON_OFFICIAL"
+    },
+    "Evaluate": {
+      "definition": "Work draws on varied information, themes or concepts to consider aspects such as strengths or weaknesses, advantages or disadvantages, alternative actions, and relevance or significance. Students' inquiries should lead to a supported judgement, showing relationship to its context. This will often be in a conclusion. Evidence will often be written but could be through presentation or activity.",
+      "definition_type": "PEARSON_OFFICIAL"
+    },
+    "Compare": {
+      "definition": "Identify the main factors relating to two or more items, situations or aspects of a subject that is extended to explain the similarities, differences, advantages and disadvantages. This is used to show depth of knowledge through selection of characteristics.",
+      "definition_type": "PEARSON_OFFICIAL"
+    },
+    "Explore": {
+      "definition": "Skills and/or knowledge involving practical research or testing.",
+      "definition_type": "PEARSON_OFFICIAL"
+    },
+    "Examine": {
+      "definition": "Consider a subject carefully and in detail to identify its important facts, features and relationships. A simple unsupported list is not sufficient where the criterion requires developed examination.",
+      "definition_type": "OPERATIONAL"
+    },
+    "Determine": {
+      "definition": "Reach a conclusion or decision about the specified matter after considering relevant information and evidence.",
+      "definition_type": "OPERATIONAL"
+    },
+    "Critically examine": {
+      "definition": "Examine the specified subject in depth, question relevant claims or assumptions, consider supporting evidence and different perspectives, and reach a reasoned conclusion.",
+      "definition_type": "OPERATIONAL"
+    },
+    "Appraise": {
+      "definition": "Examine relevant information and evidence to judge the importance, value or impact of the specified subject and reach a supported judgement.",
+      "definition_type": "OPERATIONAL"
+    }
+  }
+}
