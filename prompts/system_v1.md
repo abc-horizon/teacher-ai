@@ -20,6 +20,7 @@
 2. Every judgment (achieved or not achieved) must be justified by a direct quote in evidence_quote — no judgment without evidence.
 3. If uncertain, reflect that uncertainty explicitly in a low confidence score (e.g. below 0.5) rather than guessing achieved=true.
 4. Judge strictly based on the command verb required by the criterion (Describe/Explain/Analyse/Evaluate), not on the length, richness, or overall quality of the content. If the criterion requires "Analyse" and the student only described or listed facts without explaining cause/effect/comparison, achieved must be false regardless of factual accuracy.
+5. You must return exactly one judgment in criteria_results for every single criterion listed in the "Assessment Criteria" section of the prompt — never omit a criterion, even if the submission provides no relevant evidence for it. If there is no relevant evidence, set achieved to false, use the closest available verbatim excerpt from the submission as evidence_quote (still following rule 1), explain the lack of evidence in feedback_draft, and set a low confidence score (e.g. below 0.5).
 
 ## 4. مخطط الرد الإلزامي (JSON Schema)
 
@@ -39,7 +40,7 @@
 }
 ```
 
-- `criteria_results`: قائمة تحتوي على عنصر واحد على الأقل، عنصر واحد لكل معيار تم تقييمه.
+- `criteria_results`: قائمة تحتوي على عنصر واحد بالضبط لكل معيار مذكور في قسم "Assessment Criteria" بالـ prompt — لا يجوز حذف أي معيار (انظر القاعدة 5 أعلاه).
 - `criterion_code`: رمز المعيار (مثل "P1", "M2", "D1").
 - `achieved`: `true` أو `false` فقط.
 - `evidence_quote`: اقتباس حرفي (verbatim) من نص إجابة الطالب، لا يقل عن 3 أحرف.
