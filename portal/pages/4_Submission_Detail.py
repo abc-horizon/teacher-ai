@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -10,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from app.db import get_engine
 from app.grading.evaluation_service import approve_evaluation, evaluate_submission
+from app.grading.grade_calculator import calculate_suggested_grade
 from app.models import (
     AssignmentMap,
     Criterion,
@@ -20,6 +22,16 @@ from app.models import (
 )
 
 load_dotenv()
+
+LEVEL_ORDER = {"P": 0, "M": 1, "D": 2}
+
+
+def criterion_sort_key(code: str) -> tuple[int, int]:
+    """Orders codes as P's, then M's, then D's; numerically within a level."""
+    match = re.match(r"([A-Za-z]+)(\d+)", code)
+    letter = (match.group(1) if match else code)[0].upper()
+    number = int(match.group(2)) if match else 0
+    return (LEVEL_ORDER.get(letter, 99), number)
 
 st.set_page_config(page_title="Submission Detail")
 
@@ -49,15 +61,25 @@ with Session(engine) as session:
 
 st.write(f"Student: **{submission.student_internal_id}**")
 
-left, right = st.columns(2)
-with left:
-    st.subheader("Extracted Text")
-    submission_text = submission_file.extracted_text if submission_file else None
-    st.write(submission_text if submission_text else "No text extracted.")
-with right:
-    st.subheader("Assessment Criteria")
-    for criterion in criteria:
-        st.write(f"**{criterion.code}**: {criterion.descriptor}")
+submission_text = submission_file.extracted_text if submission_file else None
+
+if submission_text:
+    word_count = len(submission_text.split())
+    st.caption(f"نص التسليم متاح ({word_count} كلمة) — اضغط لعرضه")
+    with st.expander("📄 عرض نص التسليم", expanded=False):
+        st.text_area(
+            "النص المستخرج",
+            value=submission_text,
+            height=300,
+            disabled=True,
+            label_visibility="collapsed",
+        )
+else:
+    st.info("لا يوجد نص مستخرج لهذا التسليم.")
+
+st.subheader("Assessment Criteria")
+for criterion in sorted(criteria, key=lambda c: criterion_sort_key(c.code)):
+    st.write(f"**{criterion.code}**: {criterion.descriptor}")
 
 st.divider()
 
@@ -82,21 +104,24 @@ def load_latest_evaluation_into_cache():
         return {
             "evaluation_id": evaluation.id,
             "status": evaluation.status,
-            "results": [
-                {
-                    "id": result.id,
-                    "criterion_code": criteria_by_id[result.criterion_id].code,
-                    "criterion_descriptor": criteria_by_id[
-                        result.criterion_id
-                    ].descriptor,
-                    "achieved": result.achieved,
-                    "evidence_quote": result.evidence_quote,
-                    "feedback_draft": result.teacher_final_feedback
-                    or result.feedback_draft,
-                    "confidence": result.confidence,
-                }
-                for result in results
-            ],
+            "results": sorted(
+                (
+                    {
+                        "id": result.id,
+                        "criterion_code": criteria_by_id[result.criterion_id].code,
+                        "criterion_descriptor": criteria_by_id[
+                            result.criterion_id
+                        ].descriptor,
+                        "achieved": result.achieved,
+                        "evidence_quote": result.evidence_quote,
+                        "feedback_draft": result.teacher_final_feedback
+                        or result.feedback_draft,
+                        "confidence": result.confidence,
+                    }
+                    for result in results
+                ),
+                key=lambda r: criterion_sort_key(r["criterion_code"]),
+            ),
         }
 
 
@@ -125,20 +150,25 @@ else:
                 st.session_state[cache_key] = {
                     "evaluation_id": evaluation.id,
                     "status": evaluation.status,
-                    "results": [
-                        {
-                            "id": result.id,
-                            "criterion_code": criteria_by_id[result.criterion_id].code,
-                            "criterion_descriptor": criteria_by_id[
-                                result.criterion_id
-                            ].descriptor,
-                            "achieved": result.achieved,
-                            "evidence_quote": result.evidence_quote,
-                            "feedback_draft": result.feedback_draft,
-                            "confidence": result.confidence,
-                        }
-                        for result in results
-                    ],
+                    "results": sorted(
+                        (
+                            {
+                                "id": result.id,
+                                "criterion_code": criteria_by_id[
+                                    result.criterion_id
+                                ].code,
+                                "criterion_descriptor": criteria_by_id[
+                                    result.criterion_id
+                                ].descriptor,
+                                "achieved": result.achieved,
+                                "evidence_quote": result.evidence_quote,
+                                "feedback_draft": result.feedback_draft,
+                                "confidence": result.confidence,
+                            }
+                            for result in results
+                        ),
+                        key=lambda r: criterion_sort_key(r["criterion_code"]),
+                    ),
                 }
 
     st.caption("بيانات تجريبية محلية — لا اتصال حقيقي بـ Moodle بعد")
@@ -147,6 +177,21 @@ else:
     if cached:
         st.subheader("نتيجة التقييم")
         st.caption(f"الحالة: {cached['status']}")
+
+        live_results = [
+            {
+                "criterion_code": result["criterion_code"],
+                "achieved": st.session_state.get(
+                    f"achieved_{result['id']}", result["achieved"]
+                ),
+            }
+            for result in cached["results"]
+        ]
+        suggested_grade = calculate_suggested_grade(live_results)
+        st.info(
+            f"**الدرجة المقترحة: {suggested_grade}**  \n"
+            "(اقتراح آلي — القرار النهائي للمدرّس)"
+        )
 
         for result in cached["results"]:
             with st.container(border=True):
