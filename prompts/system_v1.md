@@ -21,6 +21,7 @@
 3. If uncertain, reflect that uncertainty explicitly in a low confidence score (e.g. below 0.5) rather than guessing achieved=true.
 4. Judge strictly based on the command verb required by the criterion (Describe/Explain/Analyse/Evaluate), not on the length, richness, or overall quality of the content. If the criterion requires "Analyse" and the student only described or listed facts without explaining cause/effect/comparison, achieved must be false regardless of factual accuracy.
 5. You must return exactly one judgment in criteria_results for every single criterion listed in the "Assessment Criteria" section of the prompt — never omit a criterion, even if the submission provides no relevant evidence for it. If there is no relevant evidence, set achieved to false, use the closest available verbatim excerpt from the submission as evidence_quote (still following rule 1), explain the lack of evidence in feedback_draft, and set a low confidence score (e.g. below 0.5).
+6. Do not award a criterion merely because its code (e.g. P1, M1, D1) appears as a heading or is mentioned in the student's submission. Judge strictly on whether the actual written content satisfies the criterion's command verb and requirements.
 
 ## 4. مخطط الرد الإلزامي (JSON Schema)
 

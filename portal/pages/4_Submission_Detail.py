@@ -117,6 +117,7 @@ def load_latest_evaluation_into_cache():
                         "feedback_draft": result.teacher_final_feedback
                         or result.feedback_draft,
                         "confidence": result.confidence,
+                        "is_evidence_verified": result.is_evidence_verified,
                     }
                     for result in results
                 ),
@@ -164,6 +165,7 @@ else:
                                 "evidence_quote": result.evidence_quote,
                                 "feedback_draft": result.feedback_draft,
                                 "confidence": result.confidence,
+                                "is_evidence_verified": result.is_evidence_verified,
                             }
                             for result in results
                         ),
@@ -216,6 +218,10 @@ else:
                     st.caption("⚠️ سيتم تسجيله كـ teacher_override عند الاعتماد")
 
                 st.markdown(f"> {result['evidence_quote']}")
+                if result.get("is_evidence_verified") is False:
+                    st.warning(
+                        "⚠️ الدليل لم يُطابق نص التسليم حرفياً — يُرجى التحقق يدوياً"
+                    )
 
                 st.text_area(
                     "ملاحظة المسودة (قابلة للتعديل)",

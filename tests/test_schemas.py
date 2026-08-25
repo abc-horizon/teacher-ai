@@ -3,7 +3,11 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from app.grading.schemas import CriterionJudgment, EvaluationResponse
+from app.grading.schemas import (
+    CriterionJudgment,
+    EvaluationResponse,
+    validate_full_coverage,
+)
 
 VALID_JUDGMENT = {
     "criterion_code": "P1",
@@ -12,6 +16,12 @@ VALID_JUDGMENT = {
     "feedback_draft": "Good use of evidence throughout.",
     "confidence": 0.85,
 }
+
+
+def make_response(*codes):
+    return EvaluationResponse(
+        criteria_results=[{**VALID_JUDGMENT, "criterion_code": code} for code in codes]
+    )
 
 
 def test_full_valid_evaluation_response():
@@ -78,3 +88,26 @@ def test_invalid_json_missing_field_raises_validation_error():
     )
     with pytest.raises(ValidationError):
         EvaluationResponse.model_validate_json(raw_json)
+
+
+def test_validate_full_coverage_accepts_exact_match():
+    response = make_response("P1", "P2", "M1")
+    validate_full_coverage(response, ["P1", "P2", "M1"])
+
+
+def test_validate_full_coverage_rejects_missing_criterion():
+    response = make_response("P1", "P2")
+    with pytest.raises(ValueError, match="Missing"):
+        validate_full_coverage(response, ["P1", "P2", "M1"])
+
+
+def test_validate_full_coverage_rejects_duplicate_criterion_code():
+    response = make_response("P1", "P1", "M1")
+    with pytest.raises(ValueError, match="Duplicate"):
+        validate_full_coverage(response, ["P1", "M1", "D1"])
+
+
+def test_validate_full_coverage_rejects_invented_criterion_code():
+    response = make_response("P1", "M1", "Z9")
+    with pytest.raises(ValueError, match="Unknown"):
+        validate_full_coverage(response, ["P1", "M1"])

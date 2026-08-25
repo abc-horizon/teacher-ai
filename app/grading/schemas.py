@@ -41,3 +41,38 @@ class EvaluationResponse(BaseModel):
         if len(value) < 1:
             raise ValueError("criteria_results must contain at least one item")
         return value
+
+
+def validate_full_coverage(
+    response: EvaluationResponse, expected_codes: list[str]
+) -> None:
+    """Raises ValueError unless the response has exactly one judgment per
+    expected criterion code — no omissions, no duplicates, no invented codes.
+
+    A count mismatch always shows up as either a duplicate, a missing code,
+    or an invented code below, so there is no separate bare length check.
+    """
+    result_codes = [judgment.criterion_code for judgment in response.criteria_results]
+
+    seen = set()
+    duplicates = {code for code in result_codes if code in seen or seen.add(code)}
+    if duplicates:
+        raise ValueError(
+            f"Duplicate criterion_code(s) in response: {sorted(duplicates)}"
+        )
+
+    expected_set = set(expected_codes)
+    result_set = set(result_codes)
+
+    missing = expected_set - result_set
+    if missing:
+        raise ValueError(
+            f"Missing judgment(s) for criterion_code(s): {sorted(missing)}"
+        )
+
+    invented = result_set - expected_set
+    if invented:
+        raise ValueError(
+            f"Unknown criterion_code(s) not in the assignment's criteria: "
+            f"{sorted(invented)}"
+        )

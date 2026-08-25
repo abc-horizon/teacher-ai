@@ -1,11 +1,14 @@
 import json
+import logging
 
 from sqlmodel import Session, select
 
 from app.grading.llm_client import evaluate as llm_evaluate
 from app.grading.prompt_builder import build_prompt
-from app.grading.schemas import EvaluationResponse
+from app.grading.schemas import EvaluationResponse, validate_full_coverage
 from app.models import AuditLog, Criterion, CriterionResult, Evaluation
+
+logger = logging.getLogger(__name__)
 
 
 def evaluate_submission(
@@ -19,6 +22,7 @@ def evaluate_submission(
     prompt = build_prompt(criteria, submission_text)
     raw_response = llm_evaluate(prompt)
     validated = EvaluationResponse.model_validate_json(json.dumps(raw_response))
+    validate_full_coverage(validated, [criterion.code for criterion in criteria])
 
     criteria_by_code = {criterion.code: criterion for criterion in criteria}
 
@@ -34,10 +38,14 @@ def evaluate_submission(
 
     results = []
     for judgment in validated.criteria_results:
-        criterion = criteria_by_code.get(judgment.criterion_code)
-        if criterion is None:
-            raise ValueError(
-                f"Model returned unknown criterion_code: {judgment.criterion_code!r}"
+        criterion = criteria_by_code[judgment.criterion_code]
+        is_evidence_verified = judgment.evidence_quote in submission_text
+        if not is_evidence_verified:
+            logger.warning(
+                "evidence_quote is not a verbatim substring of submission_text "
+                "for criterion_code=%s: %r",
+                judgment.criterion_code,
+                judgment.evidence_quote,
             )
         result = CriterionResult(
             evaluation_id=evaluation.id,
@@ -46,6 +54,7 @@ def evaluate_submission(
             evidence_quote=judgment.evidence_quote,
             feedback_draft=judgment.feedback_draft,
             confidence=judgment.confidence,
+            is_evidence_verified=is_evidence_verified,
         )
         session.add(result)
         results.append(result)

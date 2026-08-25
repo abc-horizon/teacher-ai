@@ -67,6 +67,7 @@ class CriterionResult(SQLModel, table=True):
     confidence: float
     teacher_override: bool = Field(default=False)
     teacher_final_feedback: Optional[str] = None
+    is_evidence_verified: Optional[bool] = Field(default=None)
 
 
 class AuditLog(SQLModel, table=True):

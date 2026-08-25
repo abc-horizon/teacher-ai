@@ -177,3 +177,107 @@ def test_approve_evaluation_transitions_status_from_draft_to_approved(
         evaluation = session.get(Evaluation, evaluation_id)
 
     assert evaluation.status == "approved"
+
+
+def _make_criterion_and_submission(session, code, descriptor):
+    unit = Unit(zoho_unit_id=f"ZU-EV-{code}", name="Evidence Verification Unit")
+    session.add(unit)
+    session.commit()
+    session.refresh(unit)
+
+    snapshot = CriteriaSnapshot(unit_id=unit.id)
+    session.add(snapshot)
+    session.commit()
+    session.refresh(snapshot)
+
+    criterion = Criterion(snapshot_id=snapshot.id, code=code, descriptor=descriptor)
+    session.add(criterion)
+    session.commit()
+    session.refresh(criterion)
+
+    assignment_map = AssignmentMap(
+        moodle_assign_id=hash(code) % 1_000_000, snapshot_id=snapshot.id
+    )
+    session.add(assignment_map)
+    session.commit()
+    session.refresh(assignment_map)
+
+    submission = Submission(
+        assignment_map_id=assignment_map.id,
+        moodle_submission_id=1,
+        student_internal_id="S-EV-1",
+        submitted_at=datetime.utcnow(),
+    )
+    session.add(submission)
+    session.commit()
+    session.refresh(submission)
+
+    return criterion, submission
+
+
+def test_is_evidence_verified_true_when_quote_matches_submission_verbatim(monkeypatch):
+    engine = create_engine("sqlite://")
+    SQLModel.metadata.create_all(engine)
+    submission_text = "Coal is a fossil fuel used for electricity generation."
+
+    monkeypatch.setattr(
+        "app.grading.evaluation_service.llm_evaluate",
+        lambda prompt: {
+            "criteria_results": [
+                {
+                    "criterion_code": "P1",
+                    "achieved": True,
+                    "evidence_quote": submission_text,
+                    "feedback_draft": "Good description.",
+                    "confidence": 0.9,
+                }
+            ]
+        },
+    )
+
+    with Session(engine) as session:
+        criterion, submission = _make_criterion_and_submission(
+            session, "P1", "Describe a fossil fuel"
+        )
+        _evaluation, results = evaluate_submission(
+            session=session,
+            submission_id=submission.id,
+            criteria=[criterion],
+            submission_text=submission_text,
+        )
+
+    assert results[0].is_evidence_verified is True
+
+
+def test_is_evidence_verified_false_when_quote_does_not_match_submission(monkeypatch):
+    engine = create_engine("sqlite://")
+    SQLModel.metadata.create_all(engine)
+    submission_text = "Coal is a fossil fuel used for electricity generation."
+
+    monkeypatch.setattr(
+        "app.grading.evaluation_service.llm_evaluate",
+        lambda prompt: {
+            "criteria_results": [
+                {
+                    "criterion_code": "P2",
+                    "achieved": True,
+                    "evidence_quote": "This exact sentence never appears in the submission.",
+                    "feedback_draft": "Good description.",
+                    "confidence": 0.9,
+                }
+            ]
+        },
+    )
+
+    with Session(engine) as session:
+        criterion, submission = _make_criterion_and_submission(
+            session, "P2", "Describe a fossil fuel"
+        )
+        _evaluation, results = evaluate_submission(
+            session=session,
+            submission_id=submission.id,
+            criteria=[criterion],
+            submission_text=submission_text,
+        )
+
+    assert results[0].is_evidence_verified is False
