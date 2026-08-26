@@ -37,6 +37,8 @@ class Submission(SQLModel, table=True):
     moodle_submission_id: int = Field(index=True)
     student_internal_id: str
     submitted_at: datetime
+    moodle_userid: Optional[int] = None
+    student_display_name: Optional[str] = None
 
 
 class SubmissionFile(SQLModel, table=True):
