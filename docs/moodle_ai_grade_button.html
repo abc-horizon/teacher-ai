@@ -1,0 +1,101 @@
+<!--
+  زر "قيّم بالـ AI" داخل صفحات واجبات Moodle (mod/assign).
+
+  - بجدول تصحيح الواجب (كل التسليمات): زر صغير 🤖 جنب كل طالب لحاله — يفتح
+    تقييمه هو بالتحديد مباشرة (يسحب النص ويقيّمه فورًا، بدون أي ضغطة إضافية).
+  - بصفحة تصحيح طالب واحد (بعد فتحه): نفس الشيء، زر واحد أعلى الصفحة.
+
+  طريقة التركيب:
+  1. سجّلي دخول Moodle بحساب admin.
+  2. Site administration → Appearance → Additional HTML.
+  3. الصقي كل هذا الكود بالضبط داخل صندوق "Before BODY is closed"
+     (additionalhtmlfooter) — وليس "Within HEAD".
+  4. Save changes.
+
+  قبل اللصق، بدّلي القيمة أدناه (PORTAL_BASE_URL) لعنوان مشروعك فعليًا:
+  - إذا كنتِ تختبرين من نفس الجهاز اللي عليه المشروع شغّال (streamlit run)،
+    اتركيها كما هي: http://localhost:8501
+  - إذا صار للمشروع عنوان شبكي حقيقي لاحقًا (بعد نشره)، بدّليها له.
+
+  آمن بالكامل: هذا الكود لا يتصل بـ Moodle API إطلاقًا ولا يحمل أي توكن —
+  فقط يقرأ رقم الواجب (cmid) ورقم كل طالب (userid) من روابط "Grade" الموجودة
+  أصلاً بصفحة Moodle نفسها، ويبني رابطًا لمشروعنا. مشروعنا (على السيرفر، ليس
+  هنا) هو من يتحدّث مع Moodle API فعليًا باستخدام التوكن المحفوظ بأمان في .env.
+-->
+<script>
+(function () {
+  var PORTAL_BASE_URL = "http://localhost:8501";
+
+  if (!/\/mod\/assign\/view\.php/.test(window.location.pathname)) {
+    return;
+  }
+
+  var pageParams = new URLSearchParams(window.location.search);
+  var pageCmid = pageParams.get("id");
+  if (!pageCmid) {
+    return;
+  }
+
+  function buildUrl(cmid, userid) {
+    var targetPage = userid ? "/Submission_Detail" : "/Submissions";
+    return (
+      PORTAL_BASE_URL +
+      targetPage +
+      "?cmid=" +
+      encodeURIComponent(cmid) +
+      (userid ? "&userid=" + encodeURIComponent(userid) : "")
+    );
+  }
+
+  function makeButton(cmid, userid, big) {
+    var a = document.createElement("a");
+    a.href = buildUrl(cmid, userid);
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.title = "قيّم بالـ AI";
+    a.dir = "rtl";
+    // <bdi> isolates "AI" (Latin/LTR) from the surrounding Arabic (RTL) text
+    // so the browser's bidi algorithm doesn't reorder the characters —
+    // without it, mixing "AI" into an RTL string can visually garble it.
+    // Safe to use innerHTML here: both branches are fixed strings we wrote,
+    // no user-controlled data is ever concatenated into them.
+    a.innerHTML = big ? "🤖 قيّم بالـ <bdi>AI</bdi>" : "🤖";
+    a.style.cssText = big
+      ? "display:inline-block;background:#2e7d32;color:#fff;padding:10px 18px;" +
+        "border-radius:6px;text-decoration:none;font-weight:bold;margin:12px 0;font-size:15px;"
+      : "display:inline-block;background:#2e7d32;color:#fff;padding:3px 9px;" +
+        "border-radius:5px;text-decoration:none;font-weight:bold;margin-inline-start:6px;font-size:13px;";
+    return a;
+  }
+
+  // Grading table (many students at once): every "Grade" link Moodle
+  // already renders carries that row's own userid — reuse it instead of
+  // trying to parse the table's row/column structure, which varies by
+  // Moodle version and theme.
+  var gradeLinks = document.querySelectorAll(
+    'a[href*="action=grade"][href*="userid="]'
+  );
+  var addedAny = false;
+  gradeLinks.forEach(function (link) {
+    var linkParams = new URLSearchParams(link.href.split("?")[1] || "");
+    var rowUserid = linkParams.get("userid");
+    if (!rowUserid) return;
+    var button = makeButton(pageCmid, rowUserid, false);
+    link.parentNode.insertBefore(button, link.nextSibling);
+    addedAny = true;
+  });
+  if (addedAny) return;
+
+  // Single-student grading page (URL itself already has userid) — or the
+  // plain assignment view before any student is opened (no userid yet):
+  // one button at the top of the content area either way.
+  var pageUserid = pageParams.get("userid");
+  var button = makeButton(pageCmid, pageUserid, true);
+  // #region-main is the standard content wrapper in Moodle's Boost theme
+  // (the default/most common theme). If the site uses a different theme
+  // and the button doesn't appear, open devtools on an assignment page,
+  // inspect the main content area's id/class, and update the selector below.
+  var target = document.querySelector("#region-main") || document.body;
+  target.insertBefore(button, target.firstChild);
+})();
+</script>

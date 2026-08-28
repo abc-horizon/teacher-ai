@@ -58,9 +58,10 @@ def main():
 
     selected_criteria = [c for c in criteria if c.code in SELECTED_CODES]
 
-    prompt = build_prompt(selected_criteria, SUBMISSION_TEXT)
-    raw_response = evaluate(prompt)
+    prompt, _was_truncated = build_prompt(selected_criteria, SUBMISSION_TEXT)
+    raw_response, usage = evaluate(prompt)
     evaluation = EvaluationResponse.model_validate_json(json.dumps(raw_response))
+    print(f"usage: {usage}")
 
     for result in evaluation.criteria_results:
         print(f"{result.criterion_code}: achieved={result.achieved}")

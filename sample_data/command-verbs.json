@@ -7,10 +7,6 @@
     "important_note": "Definitions marked PEARSON_OFFICIAL are taken from the Pearson glossary. Definitions marked OPERATIONAL are supplementary fixed interpretations for command verbs that were not separately defined in that glossary. Operational definitions must not be presented as direct Pearson quotations."
   },
   "command_verbs": {
-    "Describe": {
-      "definition": "Give a clear, objective account in their own words showing recall, and in some cases application, of the relevant features and information about the subject.",
-      "definition_type": "PEARSON_OFFICIAL"
-    },
     "Investigate": {
       "definition": "Conduct an inquiry or study into something to discover and examine facts and information.",
       "definition_type": "PEARSON_OFFICIAL"
@@ -53,6 +49,14 @@
     },
     "Appraise": {
       "definition": "Examine relevant information and evidence to judge the importance, value or impact of the specified subject and reach a supported judgement.",
+      "definition_type": "OPERATIONAL"
+    },
+    "Describe": {
+      "definition": "Give a clear description that includes all the relevant features. It could be a description of a set of circumstances, a process or a system.",
+      "definition_type": "OPERATIONAL"
+    },
+    "Analyse": {
+      "definition": "Break an issue, topic or situation down into its component parts, examine each part in detail and how they relate to one another, in order to draw out the underlying causes, effects, or relationships.",
       "definition_type": "OPERATIONAL"
     }
   }

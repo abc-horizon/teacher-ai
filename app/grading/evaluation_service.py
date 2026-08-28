@@ -1,14 +1,26 @@
 import json
 import logging
+import re
 
 from sqlmodel import Session, select
 
 from app.grading.llm_client import evaluate as llm_evaluate
-from app.grading.prompt_builder import build_prompt
+from app.grading.prompt_builder import build_prompt, prepare_submission_text
 from app.grading.schemas import EvaluationResponse, validate_full_coverage
 from app.models import AuditLog, Criterion, CriterionResult, Evaluation
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_for_comparison(text: str) -> str:
+    """Collapses whitespace runs and unifies quote/dash variants before
+    checking evidence_quote against submission text — docx extraction often
+    introduces spacing/typographic differences that are not real mismatches.
+    """
+    text = text.replace("“", '"').replace("”", '"')
+    text = text.replace("‘", "'").replace("’", "'")
+    text = text.replace("–", "-").replace("—", "-").replace("−", "-")
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def evaluate_submission(
@@ -18,9 +30,15 @@ def evaluate_submission(
     submission_text: str,
     model_id: str = "deepseek-chat",
     prompt_version: str = "v1",
-) -> tuple[Evaluation, list[CriterionResult]]:
-    prompt = build_prompt(criteria, submission_text)
-    raw_response = llm_evaluate(prompt)
+) -> tuple[Evaluation, list[CriterionResult], bool]:
+    """Returns (evaluation, results, was_truncated)."""
+    prompt, was_truncated = build_prompt(criteria, submission_text)
+    # Must match exactly what build_prompt sent to the model (pseudonymized
+    # and, if applicable, truncated) — comparing against the raw original
+    # would falsely fail on any real [NAME]/[EMAIL]/[PHONE] quote, and would
+    # falsely pass on a quote from text the model never actually saw.
+    prepared_text, _ = prepare_submission_text(submission_text)
+    raw_response, usage = llm_evaluate(prompt)
     validated = EvaluationResponse.model_validate_json(json.dumps(raw_response))
     validate_full_coverage(validated, [criterion.code for criterion in criteria])
 
@@ -31,6 +49,9 @@ def evaluate_submission(
         prompt_version=prompt_version,
         model_id=model_id,
         status="draft",
+        prompt_tokens=usage.get("prompt_tokens"),
+        completion_tokens=usage.get("completion_tokens"),
+        total_tokens=usage.get("total_tokens"),
     )
     session.add(evaluation)
     session.commit()
@@ -39,7 +60,9 @@ def evaluate_submission(
     results = []
     for judgment in validated.criteria_results:
         criterion = criteria_by_code[judgment.criterion_code]
-        is_evidence_verified = judgment.evidence_quote in submission_text
+        is_evidence_verified = _normalize_for_comparison(
+            judgment.evidence_quote
+        ) in _normalize_for_comparison(prepared_text)
         if not is_evidence_verified:
             logger.warning(
                 "evidence_quote is not a verbatim substring of submission_text "
@@ -62,7 +85,7 @@ def evaluate_submission(
     for result in results:
         session.refresh(result)
 
-    return evaluation, results
+    return evaluation, results, was_truncated
 
 
 def approve_evaluation(

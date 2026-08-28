@@ -4,7 +4,7 @@ from pathlib import Path
 
 from sqlmodel import Session, SQLModel, select
 
-from app.db import DB_PATH, get_engine
+from app.db import DB_PATH, IS_SQLITE_DEV, get_engine
 from app.models import (
     AssignmentMap,
     CriteriaSnapshot,
@@ -118,6 +118,18 @@ def seed(engine):
 
 
 def main():
+    # Reseeding means starting from an empty database. Dropping the SQLite
+    # file is the cheapest way to do that -- but ONLY when the app is
+    # actually on that file. With DATABASE_URL pointing at a real server,
+    # deleting app_dev.db would destroy an unrelated local file and seed
+    # somewhere else, so refuse rather than half-do it.
+    if not IS_SQLITE_DEV:
+        raise SystemExit(
+            "Refusing to run: this is a DEV seeder that wipes the database, "
+            "but DATABASE_URL points at a non-SQLite backend. Unset "
+            "DATABASE_URL to seed the local app_dev.db file."
+        )
+
     if DB_PATH.exists():
         DB_PATH.unlink()
 

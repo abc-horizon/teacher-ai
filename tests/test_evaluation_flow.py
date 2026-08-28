@@ -77,7 +77,7 @@ def evaluated_submission():
         session.commit()
         session.refresh(submission)
 
-        evaluation, results = evaluate_submission(
+        evaluation, results, _was_truncated = evaluate_submission(
             session=session,
             submission_id=submission.id,
             criteria=criteria,
@@ -107,6 +107,9 @@ def test_full_evaluation_stores_draft_evaluation_and_results(evaluated_submissio
     assert evaluation.status == "draft"
     assert evaluation.submission_id == evaluated_submission["submission_id"]
     assert len(results) == evaluated_submission["criteria_count"]
+    assert evaluation.prompt_tokens is not None
+    assert evaluation.completion_tokens is not None
+    assert evaluation.total_tokens == evaluation.prompt_tokens + evaluation.completion_tokens
     for result in results:
         assert result.evidence_quote
         assert 0.0 <= result.confidence <= 1.0
@@ -222,24 +225,27 @@ def test_is_evidence_verified_true_when_quote_matches_submission_verbatim(monkey
 
     monkeypatch.setattr(
         "app.grading.evaluation_service.llm_evaluate",
-        lambda prompt: {
-            "criteria_results": [
-                {
-                    "criterion_code": "P1",
-                    "achieved": True,
-                    "evidence_quote": submission_text,
-                    "feedback_draft": "Good description.",
-                    "confidence": 0.9,
-                }
-            ]
-        },
+        lambda prompt: (
+            {
+                "criteria_results": [
+                    {
+                        "criterion_code": "P1",
+                        "achieved": True,
+                        "evidence_quote": submission_text,
+                        "feedback_draft": "Good description.",
+                        "confidence": 0.9,
+                    }
+                ]
+            },
+            {"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120},
+        ),
     )
 
     with Session(engine) as session:
         criterion, submission = _make_criterion_and_submission(
             session, "P1", "Describe a fossil fuel"
         )
-        _evaluation, results = evaluate_submission(
+        _evaluation, results, _was_truncated = evaluate_submission(
             session=session,
             submission_id=submission.id,
             criteria=[criterion],
@@ -256,24 +262,27 @@ def test_is_evidence_verified_false_when_quote_does_not_match_submission(monkeyp
 
     monkeypatch.setattr(
         "app.grading.evaluation_service.llm_evaluate",
-        lambda prompt: {
-            "criteria_results": [
-                {
-                    "criterion_code": "P2",
-                    "achieved": True,
-                    "evidence_quote": "This exact sentence never appears in the submission.",
-                    "feedback_draft": "Good description.",
-                    "confidence": 0.9,
-                }
-            ]
-        },
+        lambda prompt: (
+            {
+                "criteria_results": [
+                    {
+                        "criterion_code": "P2",
+                        "achieved": True,
+                        "evidence_quote": "This exact sentence never appears in the submission.",
+                        "feedback_draft": "Good description.",
+                        "confidence": 0.9,
+                    }
+                ]
+            },
+            {"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120},
+        ),
     )
 
     with Session(engine) as session:
         criterion, submission = _make_criterion_and_submission(
             session, "P2", "Describe a fossil fuel"
         )
-        _evaluation, results = evaluate_submission(
+        _evaluation, results, _was_truncated = evaluate_submission(
             session=session,
             submission_id=submission.id,
             criteria=[criterion],

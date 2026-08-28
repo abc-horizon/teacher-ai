@@ -9,6 +9,8 @@ from sqlmodel import Session, select
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from app.db import get_engine
+from app.extractor.importer import client_and_courseid_for_key, sync_course
+from app.extractor.moodle_client import MoodleCallError
 from app.models import AssignmentMap, CriteriaSnapshot, Unit
 
 load_dotenv()
@@ -37,6 +39,23 @@ else:
         ).all()
 
     st.write(f"Unit: **{unit.zoho_unit_id} — {unit.name}**")
+
+    if st.button("🔄 تحديث من Moodle"):
+        with st.spinner("جارٍ الاتصال بـ Moodle وجلب الواجبات..."):
+            try:
+                client, courseid = client_and_courseid_for_key(unit.zoho_unit_id)
+                counters = sync_course(courseid, client=client)
+            except MoodleCallError as exc:
+                st.error(f"فشل الاتصال بـ Moodle: {exc}")
+            except ValueError:
+                st.error("لا يمكن مزامنة هذه الوحدة — معرّفها ليس رقم مادة Moodle صالحًا.")
+            else:
+                st.success(
+                    f"تم التحديث — واجبات جديدة: {counters['assignments_created']}، "
+                    f"موجودة مسبقًا: {counters['assignments_existing']}، "
+                    f"تسليمات جديدة: {counters['submissions_created']}"
+                )
+                st.rerun()
 
     if not assignment_maps:
         st.info("No assignments found for this unit.")

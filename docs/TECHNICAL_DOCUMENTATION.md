@@ -1,6 +1,6 @@
 # التوثيق التقني الكامل — BTEC AI Assessment Assistant
 
-> آخر تحديث: 2026-08-25. هذا التوثيق مبني على قراءة فعلية للكود الحالي في هذا الفرع (`main`)، وليس على النية الأصلية للمشروع. حيث يوجد تعارض بين هذا الملف و [README.md](../README.md) (الذي لا يزال يصف حالة T0.2 القديمة)، **صدّق هذا الملف**.
+> آخر تحديث: 2026-08-26. هذا التوثيق مبني على قراءة فعلية للكود الحالي في هذا الفرع (`main`)، وليس على النية الأصلية للمشروع. حيث يوجد تعارض بين هذا الملف و [README.md](../README.md) (الذي لا يزال يصف حالة T0.2 القديمة)، **صدّق هذا الملف**.
 
 ---
 
@@ -27,10 +27,10 @@
 | ترتيب المعايير (P→M→D) + الدرجة المقترحة | ✅ مكتمل (`app/grading/grade_calculator.py`) |
 | التحقق من الدليل الحرفي (`is_evidence_verified`) | ✅ مكتمل، تحذير بصري فقط، لا يرفض التقييم |
 | التحقق من التغطية الكاملة للمعايير (`validate_full_coverage`) | ✅ مكتمل |
-| **إخفاء هوية الطالب (pseudonymizer)** | ⚠️ **الوحدة موجودة ومُختبرة بمعزل، لكنها غير مستدعاة من أي مكان في مسار التقييم الفعلي** — انظر القسم 7 |
-| استخراج نص رسمي من الملفات (`app/extractor/`) | ❌ فارغ تمامًا (`.gitkeep` فقط) |
+| **إخفاء هوية الطالب (pseudonymizer)** | ✅ مربوطة فعليًا الآن — `prompt_builder.prepare_submission_text()` تستدعي `pseudonymize()` قبل إرسال أي نص تسليم لـ DeepSeek، و`evaluation_service.py` يتحقق من `evidence_quote` مقابل نفس النص المُجهَّل (وليس النص الخام) — انظر القسم 7 |
+| استخراج نص رسمي من الملفات (`app/extractor/`) | ✅ `moodle_client.py` (اتصال Moodle)، `sync.py` (جلب مواد/واجبات/تسليمات)، `file_fetcher.py` (تنزيل + استخراج نص)، `importer.py` (تنسيق المزامنة الكامل، مُستخدَم من الـ portal مباشرة) |
 | RAG (`app/rag/`) | ❌ فارغ عمدًا، معطّل بقرار توثّقه `prompt_builder.py` نفسها |
-| اتصال Moodle حقيقي (`app/moodle_api.py`) | ❌ ملف فارغ (تعليق واحد فقط: "Placeholder... T1.1") |
+| اتصال Moodle حقيقي (`app/moodle_api.py` لا يزال فارغًا، لكن `app/extractor/*` يغطي هذا فعليًا) | ✅ **يعمل فعليًا من الواجهة** — مادة Sustainable Energy الحقيقية (courseid=373) مستوردة بالكامل عبر زرَّي "🔄 تحديث من Moodle" (صفحة Assignments) و"تحديث البيانات" (صفحة Submissions)، وليس فقط عبر سكربتات CLI. معايير BTEC نفسها (نص P/M/D) لا تزال محلية — انظر القسم 12 |
 | FastAPI (`app/main.py`) | ❌ هيكل عظمي فقط (`/health` endpoint)، غير مستخدم من أي مكان آخر في المشروع |
 | `README.md` | ⚠️ قديم جدًا — يصف المشروع كأنه لا يزال في T0.2 (لا وظائف مطلقًا)، بينما الواقع متقدم كثيرًا |
 
@@ -40,7 +40,7 @@
 
 - **الواجهة**: Streamlit (`portal/`) — متعددة الصفحات عبر آلية `pages/` القياسية في Streamlit.
 - **API مستقبلي (غير مفعّل بعد)**: FastAPI (`app/main.py`) — لا علاقة له حاليًا بمسار التقييم.
-- **قاعدة البيانات**: SQLite محليًا (`app_dev.db`، مستثناة من git عبر `.gitignore: *.db`)، عبر SQLModel/SQLAlchemy. `DATABASE_URL` في `.env` غير مستخدم فعليًا — `app/db.py` يبني مسار SQLite ثابتًا دائمًا (`PROJECT_ROOT/app_dev.db`)، بصرف النظر عن قيمة `.env`.
+- **قاعدة البيانات**: SQLite محليًا (`app_dev.db`، مستثناة من git عبر `.gitignore: *.db`)، عبر SQLModel/SQLAlchemy. `DATABASE_URL` في `.env` **مقروء فعليًا الآن** (2026-08-27): `app/db.py` يستخدمه إن كان مضبوطًا، ويعود إلى ملف SQLite المحلي إن كان فارغًا — وهو الافتراضي للتطوير. المخطَّط (9 جداول) يُترجَم بنجاح إلى SQLite وPostgreSQL وMySQL (مُتحقَّق منه بتوليد DDL للثلاثة)، و`scripts/migrate_app_db.py` ينقل البيانات القائمة إلى سيرفر حقيقي مع الحفاظ على المفاتيح الأساسية.
 - **نموذج الذكاء الاصطناعي**: DeepSeek (`deepseek-chat`) عبر مكتبة `openai` الرسمية (متوافقة OpenAI API) مع `base_url="https://api.deepseek.com"`.
 - **التحقق من المخرجات**: Pydantic v2 (`app/grading/schemas.py`).
 - **استخراج النصوص**: `pdfplumber` (PDF)، `python-docx` (DOCX) — مستخدمة حاليًا فقط داخل `portal/pages/3_Submissions.py`، وليس في وحدة مخصصة.
@@ -87,11 +87,20 @@ AuditLog: جدول مستقل، يسجّل أفعال المدرّس (لا عل�
 ## 5. تدفق العمل الكامل (End-to-End)
 
 ```
-[Moodle]  ❌ غير موصول فعليًا بعد
+[Moodle]  ✅ موصول فعليًا (elearning.abchorizon.com، مادة Sustainable Energy الحقيقية)
     │
     ▼
-[رفع يدوي عبر portal]  ✅  →  استخراج نص (pdfplumber/python-docx/txt) inline في 3_Submissions.py
-    │                         → إنشاء Submission + SubmissionFile في القاعدة
+[2_Assignments.py: زر "🔄 تحديث من Moodle"]  ✅  →  sync_course(courseid)
+    │                                              (app/extractor/importer.py)
+    │                                              → مواد/واجبات جديدة تُكتشف وتُدرَج idempotent
+    ▼
+[3_Submissions.py: زر "تحديث البيانات"]  ✅  →  sync_course() + extract_pending_files()
+    │                                          → تسليمات + ملفات حقيقية من Moodle
+    │                                          → تنزيل الملف (file_fetcher.download_file)
+    │                                          → استخراج نص (pdfplumber/python-docx/txt)
+    │                                          → إنشاء/تحديث Submission + SubmissionFile في القاعدة
+    │
+    │  (لا يزال متاحًا أيضًا: رفع يدوي عبر "أدوات تجريبية" لنفس الصفحة، لبيانات تجريبية محلية)
     ▼
 [4_Submission_Detail.py: زر "قيّم هذا التسليم (AI)"]
     │
@@ -99,10 +108,10 @@ AuditLog: جدول مستقل، يسجّل أفعال المدرّس (لا عل�
 evaluate_submission()  (app/grading/evaluation_service.py)
     │
     ├─ build_prompt(criteria, submission_text)     ← حقن كامل وحرفي للمعايير (بدون RAG، انظر القسم 6.1)
-    ├─ llm_evaluate(prompt)                         ← استدعاء DeepSeek، رسالة واحدة بلا تاريخ محادثة
+    ├─ llm_evaluate(prompt)                         ← استدعاء DeepSeek، رسالة واحدة بلا تاريخ محادثة، يرجع (content, usage)
     ├─ EvaluationResponse.model_validate_json(...)  ← تحقق Pydantic (بنية، مدى confidence، طول evidence_quote)
     ├─ validate_full_coverage(...)                  ← تحقق: لا نقص، لا تكرار، لا معيار مخترع
-    ├─ لكل نتيجة: is_evidence_verified = evidence_quote in submission_text  ← تحذير console فقط عند الفشل، لا رفض
+    ├─ لكل نتيجة: is_evidence_verified = مطابقة evidence_quote (بعد تطبيع مسافات/علامات اقتباس/شرطات) داخل نص التسليم المُجهَّل والمُعَدّ فعليًا لِلـ prompt ← تحذير console فقط عند الفشل، لا رفض
     └─ حفظ Evaluation(status="draft") + CriterionResult[] في القاعدة
     │
     ▼
@@ -147,19 +156,23 @@ RAG_NOTE = (
 ```python
 _client = OpenAI(api_key=os.getenv("LLM_API_KEY"), base_url="https://api.deepseek.com")
 
-def evaluate(prompt: str) -> dict:
+def evaluate(prompt: str) -> tuple[dict, dict]:
+    model = os.getenv("LLM_MODEL") or "deepseek-v4-flash"
     response = _client.chat.completions.create(
-        model="deepseek-chat",
+        model=model,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
         response_format={"type": "json_object"},
     )
+    # ... returns (parsed_json_content, {"prompt_tokens", "completion_tokens", "total_tokens"})
 ```
 
 - **لا تاريخ محادثة**: رسالة `user` واحدة فقط في كل استدعاء، عميل عديم الحالة (stateless)، لا سياق محفوظ بين الاستدعاءات.
-- **لا fine-tuning ولا custom model IDs ولا تخزين سياق على جانب DeepSeek**: `model="deepseek-chat"` ثابت حرفيًا في الكود.
-- **تفصيل مهم**: بارامتر `model_id` في توقيع `evaluate_submission()` (افتراضيًا `"deepseek-chat"`) **لا يُمرَّر فعليًا** لـ `llm_evaluate()` — فقط يُخزَّن كحقل نصي في سجل `Evaluation`. القيمة الفعلية المُرسَلة لـ DeepSeek مكتوبة بشكل منفصل وثابت داخل `llm_client.py` نفسه. لا يوجد مسار حالي لتغيير النموذج من الخارج.
+- **لا fine-tuning ولا custom model IDs ولا تخزين سياق على جانب DeepSeek**.
+- **قابل للضبط عبر البيئة**: اسم الموديل الفعلي يُقرأ من متغير البيئة `LLM_MODEL` (افتراضيًا `deepseek-v4-flash` إن لم يُحدَّد) — تغييره لا يتطلب تعديل كود. ملاحظة تاريخية: `deepseek-chat` كان الاسم المستخدم سابقًا؛ DeepSeek أعلنت إيقافه اعتبارًا من 2026-07-24 (كان موجَّهًا خلال الفترة الانتقالية إلى `deepseek-v4-flash`)، فتم التحويل صراحة إلى `deepseek-v4-flash`.
+- **تفصيل مهم**: بارامتر `model_id` في توقيع `evaluate_submission()` لا يزال يُخزَّن فقط كحقل نصي وصفي في سجل `Evaluation` ولا يُمرَّر فعليًا لـ `llm_evaluate()` — الموديل الفعلي المُرسَل يُحدَّد حصرًا عبر `LLM_MODEL`.
 - `temperature=0.2` (منخفضة نسبيًا، لصالح الاتساق) و`response_format={"type": "json_object"}` (يفرض JSON صالح من DeepSeek).
+- حقل `usage` من استجابة DeepSeek (`prompt_tokens`/`completion_tokens`/`total_tokens`) يُخزَّن الآن على نفس سجل `Evaluation` (أعمدة اختيارية أُضيفت عبر `ALTER TABLE` غير مدمّر) تمهيدًا لعدّاد التكلفة.
 
 ### 6.3. طبقة التحقق (`schemas.py`)
 
@@ -191,7 +204,7 @@ def calculate_suggested_grade(results: list[dict]) -> str:
 
 ---
 
-## 7. الخصوصية والأمان — ⚠️ فجوة حرجة موثّقة
+## 7. الخصوصية والأمان — الفجوة الحرجة السابقة مُغلقة الآن، بقيود جديدة يجب معرفتها
 
 ### 7.1. ما هو مبني (`app/privacy/pseudonymizer.py`)
 
@@ -202,22 +215,11 @@ def calculate_suggested_grade(results: list[dict]) -> str:
 - `NAME_PATTERN` (كلمتان إلى أربع كلمات تبدأ بحرف كبير متتالية) → `[NAME]`، **إلا** إذا كانت إحدى الكلمات ضمن `DOMAIN_EXCEPTION_WORDS` (قائمة يدوية من مصطلحات وحدة "Sustainable Energy" تحديدًا + أفعال الأمر + "Pearson"/"BTEC") — لتجنّب تحويل "Fossil Fuels" إلى `[NAME]` خطأً.
 - مُختبرة جيدًا في [`tests/test_pseudonymizer.py`](../tests/test_pseudonymizer.py) (6 اختبارات: أسماء، إيميلات، هواتف، استثناء المصطلحات العلمية، نص مختلط، idempotency).
 
-### 7.2. الفجوة الفعلية
+### 7.2. الحالة الحالية (مُغلقة، تحقّقنا منها حيًّا على بيانات Moodle حقيقية)
 
-```
-grep -rn "pseudonymize" --include=*.py .
-  → scripts/test_pseudonymizer_demo.py
-  → tests/test_pseudonymizer.py
-  → app/privacy/pseudonymizer.py
-```
+`prompt_builder.prepare_submission_text()` يستدعي `pseudonymize()` قبل أي إرسال لنص التسليم إلى DeepSeek، و`evaluate_submission()` (في `evaluation_service.py`) يتحقق من `evidence_quote` مقابل نفس النص المُجهَّل والمُعَدّ فعليًا — وليس النص الخام. **تحقّق حي (2026-08-26)**: إعادة تقييم تسليم حقيقي من Moodle (courseid=373، 13,294 كلمة) رفعت نسبة تطابق `is_evidence_verified` من 1/12 معيارًا فقط (قبل الربط) إلى 11/12 (بعده) — وغيّرت الدرجة المقترحة من `DISTINCTION` خاطئة إلى `PASS` صحيحة (معيار M3 صار يُرصَد بشكل صحيح كـ"لم يتحقق" بدل تمريره خطأً).
 
-**لا استدعاء واحد لـ `pseudonymize()` من `evaluation_service.py` أو `prompt_builder.py` أو أي مسار فعلي في التطبيق.** بمعنى: نص التسليم الخام — بما قد يحتويه من أسماء طلاب حقيقية إن كتبها الطالب داخل إجابته، أو بيانات تواصل — **يُرسَل بالكامل إلى DeepSeek (خدمة خارجية) دون أي إخفاء هوية فعلي في النسخة الحالية**. الوحدة جاهزة ومُختبرة بمعزل تام، لكنها **غير مدمجة (wired) في الـ pipeline بعد**.
-
-**قيود بنيوية إضافية مرتبطة بالخصوصية**:
-- لا يوجد اسم طالب حقيقي مخزَّن في قاعدة البيانات نفسها (`student_internal_id` فقط مثل `S-1001`) — هذا مطبَّق ومُختبر.
-- `.gitignore` يستثني `*.db` و`student_data/` و`private_data/` و`sample_data/real/` — القصد واضح ألا تُرفع بيانات حقيقية لـ git، لكن هذا لا يمنع تسريبها إلى DeepSeek وقت التشغيل.
-
-**الخطر إن بقيت هذه الفجوة**: احتمال إرسال بيانات شخصية لطلاب إلى مزوّد ذكاء اصطناعي خارجي دون موافقة/معالجة كافية، وهو خرق امتثال/خصوصية محتمل يجب إغلاقه قبل أي استخدام مع بيانات طلاب حقيقيين.
+**قيد خصوصية جديد يجب معرفته (لم يكن موجودًا وقت التوثيق السابق)**: منذ تفعيل مزامنة Moodle الحقيقية (`app/extractor/importer.py`)، أصبح `Submission.student_display_name` (اسم الطالب الحقيقي الكامل من Moodle، عبر `core_enrol_get_enrolled_users`) و`Submission.moodle_userid` **يُخزَّنان فعليًا في `app_dev.db`** — للعرض في واجهة المدرّس فقط، وليس لإرسالهما لِـ DeepSeek (الذي يستقبل `submission_text` المُجهَّل فقط، لا اسم الطالب إطلاقًا). هذا يغيّر ما ورد سابقًا هنا بأن "لا يوجد اسم طالب حقيقي مخزَّن في القاعدة" — لم يعد صحيحًا حرفيًا؛ الصحيح الآن: **لا يُرسَل اسم حقيقي لأي خدمة خارجية، لكنه يُخزَّن محليًا في قاعدة بيانات SQLite غير مشفّرة**. `.gitignore` يستثني `*.db` فلا يُرفع لـ git، لكن هذا لا يغني عن التعامل مع `app_dev.db` كملف يحتوي بيانات شخصية حقيقية (نسخ احتياطي، صلاحيات وصول، إلخ) بمجرد استخدامه ببيانات مادة حقيقية بدل بيانات العيّنة.
 
 ### 7.3. مبدأ الحوكمة (غير قابل للكسر)
 
@@ -248,8 +250,12 @@ grep -rn "pseudonymize" --include=*.py .
 Home.py
   └─ 1_Units.py           → session_state["selected_unit_id"]
        └─ 2_Assignments.py → session_state["selected_assignment_map_id"]
+                               (+ زر "🔄 تحديث من Moodle": sync_course() حي — واجبات جديدة لهذه المادة)
             └─ 3_Submissions.py → session_state["selected_submission_id"]
-                                    (+ رفع ملف يدوي: PDF/DOCX/TXT → استخراج نص inline → Submission جديد)
+                                    (+ زر "تحديث البيانات": sync_course() + extract_pending_files() حي —
+                                       تسليمات/ملفات حقيقية من Moodle، أسماء طلاب حقيقية تُعرض هنا فقط)
+                                    (+ رفع ملف يدوي: PDF/DOCX/TXT → استخراج نص inline → Submission جديد،
+                                       لبيانات تجريبية محلية فقط)
                  └─ 4_Submission_Detail.py
                        - نص التسليم: مخفي افتراضيًا داخل st.expander (ملخص عدد الكلمات فقط ظاهر)
                        - Assessment Criteria: مرتّبة P→M→D رقميًا (ليس أبجديًا)
@@ -292,7 +298,9 @@ python scripts/seed_dev_db.py     # يبني app_dev.db من الصفر ببيا
 streamlit run portal/Home.py      # الواجهة، على المنفذ 8501 افتراضيًا
 ```
 
-متغيرات `.env` الفعلية المستخدمة: `APP_ENV` (يظهر في شريط الحالة فقط)، `LLM_API_KEY` (لـ DeepSeek). أما `DATABASE_URL` و`STAGING_MOODLE_*` فمعرَّفة في `.env.example` لكن **غير مقروءة من أي كود حاليًا** (تحضير مستقبلي فقط).
+متغيرات `.env` الفعلية المستخدمة: `APP_ENV` (يظهر في شريط الحالة فقط)، `LLM_API_KEY` (لـ DeepSeek)، `MOODLE_URL`/`MOODLE_TOKEN` (و`LMS_MOODLE_*` للموقع الاختباري)، `DATABASE_URL` (قاعدة بيانات التطبيق — `app/db.py`)، و`MOODLE_DB_*` (وصول SQL للقراءة فقط لقاعدة Moodle — `app/extractor/moodle_db.py`؛ اتركها فارغة ليعمل النظام عبر API وحده). أما `STAGING_MOODLE_*` فمعرَّفة في `.env` لكن **غير مقروءة من أي كود حاليًا**.
+
+⚠️ **تنبيه على الخلط بين القاعدتين**: `DATABASE_URL` هي قاعدة *هذا* المشروع (نكتب فيها)، و`MOODLE_DB_*` هي قاعدة Moodle (قراءة فقط، ولا يُكتب فيها إطلاقًا — الكتابة إلى Moodle تمرّ عبر Web Services API حصرًا). توجيه إحداهما إلى الأخرى خطأ جسيم.
 
 `app_dev.db` مستثناة من git (`*.db` في `.gitignore`) — كل بيئة تبني نسختها المحلية عبر seed script.
 
@@ -302,13 +310,14 @@ streamlit run portal/Home.py      # الواجهة، على المنفذ 8501 ا
 
 بالترتيب التقريبي للأولوية من ناحية الجاهزية للاستخدام الحقيقي:
 
-1. **دمج pseudonymizer في `evaluation_service.py`** قبل إرسال أي `submission_text` حقيقي لـ DeepSeek — أهم فجوة حرجة حاليًا (القسم 7).
-2. **اتصال Moodle حقيقي** (سحب تسليمات + رفع درجات/ملاحظات نهائية) — `app/moodle_api.py` لا يزال فارغًا تمامًا.
-3. **خط أنابيب استخراج رسمي** (`app/extractor/`) — منطق الاستخراج حاليًا مكانه الخطأ (داخل صفحة portal) وليس معزولاً/قابلاً لإعادة الاستخدام أو الاختبار المستقل.
+1. ~~دمج pseudonymizer في `evaluation_service.py`~~ ✅ **مُغلقة (2026-08-26)** — انظر القسم 7.2.
+2. ~~اتصال Moodle حقيقي (سحب تسليمات) من الواجهة، وليس فقط CLI~~ ✅ **مُغلقة (2026-08-26)** — زرَّا "تحديث من Moodle" على صفحتي Assignments وSubmissions، عبر `app/extractor/importer.py`. **لا يزال مفتوحًا**: رفع الدرجة/الملاحظة النهائية *إلى* Moodle بعد الاعتماد — لا يوجد أي كود لهذا الاتجاه بعد.
+3. **معايير BTEC الفعلية (نص P/M/D) من Moodle نفسه** — لا يزال مسدودًا تنظيميًا، ليس تقنيًا فقط: يتطلب إما وصول SQL مباشر لقاعدة Moodle أو تكامل Zoho (تفاصيل كاملة في [`docs/moodle_data_access_plan.md`](moodle_data_access_plan.md)). إلى حين حله، `sync_course()` يحمّل معايير "Sustainable Energy" الثابتة من `sample_data/` لأي مادة جديدة — **لا تُستخدم هذه الآلية لأي مادة غير Sustainable Energy فعليًا** لأنها ستُنتج معايير خاطئة.
 4. **تفعيل RAG (M3)** لحقن مقتطفات من `sample_data/*-assignment-guidance.json` كسياق داعم، حسب ما توثقه `RAG_NOTE` نفسها.
 5. **تحديث `README.md`** — لا يعكس أي شيء من الحالة الفعلية الموصوفة في هذا الملف.
 6. **ربط أو حذف `app/main.py` (FastAPI)** — حاليًا هيكل عظمي معزول تمامًا لا يستخدمه أي جزء آخر من النظام.
-7. **قراءة `DATABASE_URL` فعليًا** من `.env` بدل المسار الثابت في `app/db.py`، إن كان الانتقال من SQLite مخططًا له.
+7. ~~قراءة `DATABASE_URL` فعليًا من `.env` بدل المسار الثابت في `app/db.py`~~ ✅ **مُغلقة (2026-08-27)** — `app/db.py` يقرأ `DATABASE_URL` ويعود إلى SQLite المحلي عند فراغه؛ `scripts/seed_dev_db.py` يرفض العمل على غير SQLite (لأنه يمحو القاعدة)؛ و`scripts/migrate_app_db.py` ينقل البيانات إلى السيرفر مع تحقّق من تطابق أعداد الصفوف وإعادة ضبط تسلسلات PostgreSQL. **يتبقّى تشغيليًا**: تثبيت `psycopg` إن كان الهدف PostgreSQL (PyMySQL مثبَّت مسبقًا).
+8. **`app_dev.db` يحتوي الآن بيانات طلاب حقيقية (اسم كامل + Moodle userid)** بمجرد استخدام زرَّي المزامنة على مادة حقيقية — يستحق قرارًا واعيًا بشأن التشفير عند التخزين / سياسة نسخ احتياطي قبل استخدام إنتاجي فعلي (القسم 7.2).
 
 ---
 
@@ -318,7 +327,7 @@ streamlit run portal/Home.py      # الواجهة، على المنفذ 8501 ا
 |---|---|
 | حقن كل المعايير حرفيًا بدل RAG (v1) | كل معيار بوابة نجاح/رسوب مستقلة؛ الاسترجاع التقريبي يخاطر بإسقاط معيار حاسم. مؤقت حتى M3 (توثيق داخل الكود نفسه) |
 | `CriteriaSnapshot` منفصل عن `Criterion` الحي | ضمان عدم تغيّر أساس التقييم بأثر رجعي لواجبات قُيِّمت مسبقًا |
-| `student_internal_id` بدل اسم حقيقي في القاعدة | حماية أولية للخصوصية على مستوى التخزين (لكن غير كافية وحدها — القسم 7) |
+| `student_internal_id` بدل اسم حقيقي في القاعدة | حماية أولية للخصوصية على مستوى التخزين. **محدَّث**: منذ مزامنة Moodle الحقيقية، `student_display_name` (اسم حقيقي) يُخزَّن أيضًا للعرض في الواجهة فقط — لا يُرسَل لِـ DeepSeek إطلاقًا (القسم 7.2) |
 | `is_evidence_verified` تحذير فقط، لا رفض | تجنّب تعطيل تقييم كامل بسبب اختلاف صياغي بسيط (مسافة/علامة ترقيم) في اقتباس صحيح المعنى |
 | `validate_full_coverage` دالة مستقلة لا pydantic validator | تحتاج معرفة `expected_codes` من خارج الاستجابة نفسها (من قاعدة البيانات) — لا يمكن التحقق منها داخل الكلاس وحده |
 | كل صفحة/تقييم يبدأ `draft` ولا يُعتمد إلا يدويًا | المبدأ الحاكم غير القابل للكسر: "اقتراح آلي — القرار للمدرّس" |

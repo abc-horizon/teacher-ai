@@ -48,6 +48,7 @@ class SubmissionFile(SQLModel, table=True):
     filename: str
     extract_status: str
     extracted_text: Optional[str] = None
+    fileurl: Optional[str] = None
 
 
 class Evaluation(SQLModel, table=True):
@@ -57,6 +58,9 @@ class Evaluation(SQLModel, table=True):
     model_id: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     status: str
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    total_tokens: Optional[int] = None
 
 
 class CriterionResult(SQLModel, table=True):

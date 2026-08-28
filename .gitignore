@@ -1,5 +1,10 @@
 # Environment / secrets
+# `.env` alone matches only that exact name, so a `.env.bak` / `.env.local`
+# holding the same DB password would be committed. Ignore every variant and
+# re-allow the credential-free template explicitly.
 .env
+.env.*
+!.env.example
 
 # Databases
 *.db

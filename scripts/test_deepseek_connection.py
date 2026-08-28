@@ -7,8 +7,9 @@ PROMPT = (
 
 
 def main():
-    result = evaluate(PROMPT)
+    result, usage = evaluate(PROMPT)
     print(result)
+    print(f"usage: {usage}")
 
 
 if __name__ == "__main__":
